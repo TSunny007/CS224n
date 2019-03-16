@@ -40,11 +40,23 @@ def forward_backward_prop(X, labels, params, dimensions):
 
     # Note: compute cost based on `sum` not `mean`.
     ### YOUR CODE HERE: forward propagation
-    raise NotImplementedError
+    h = X.dot(W1) + b1 # (M, Dx) * (Dx, H) -> (M, H)
+    sig_h = sigmoid(h)
+    y = sig_h.dot(W2) + b2 # (M, H) * (H, Dy) -> (M, Dy)
+    softmax_y = softmax(y)
+    cost = -np.sum(labels * np.log(softmax_y))
     ### END YOUR CODE
 
     ### YOUR CODE HERE: backward propagation
-    raise NotImplementedError
+    d_y = softmax_y - labels # (M, Dy) https://math.stackexchange.com/questions/945871/derivative-of-softmax-loss-function
+    d_W2 = sig_h.T.dot(d_y) # (H, M) * (M, Dy) -> (H, Dy)
+    d_b2 = np.sum(d_y, axis=0, keepdims=True) # (M, Dy) -> (, Dy)
+
+    d_sig_h = d_y.dot(W2.T) # (M, Dy) * (Dy, H) -> (M, H)
+    d_h = sigmoid_grad(sig_h) * d_sig_h # (M, H)
+    d_W1 = X.T.dot(d_h) # (Dx, M) * (M, H) = (Dx, H)
+    d_b1 = np.sum(d_h, axis=0, keepdims=True) # (M, H) -> (, H)
+    gradW1, gradb1, gradW2, gradb2 = d_W1, d_b1, d_W2, d_b2
     ### END YOUR CODE
 
     ### Stack gradients (do not modify)
@@ -59,13 +71,13 @@ def sanity_check():
     Set up fake data and parameters for the neural network, and test using
     gradcheck.
     """
-    print "Running sanity check..."
+    print("Running sanity check...")
 
     N = 20
     dimensions = [10, 5, 10]
     data = np.random.randn(N, dimensions[0])   # each row will be a datum
     labels = np.zeros((N, dimensions[2]))
-    for i in xrange(N):
+    for i in range(N):
         labels[i, random.randint(0,dimensions[2]-1)] = 1
 
     params = np.random.randn((dimensions[0] + 1) * dimensions[1] + (
@@ -82,9 +94,20 @@ def your_sanity_checks():
     This function will not be called by the autograder, nor will
     your additional tests be graded.
     """
-    print "Running your sanity checks..."
+    print("Running your sanity checks...")
     ### YOUR CODE HERE
-    raise NotImplementedError
+    N = 20
+    dimensions = [100, 30, 10]
+    data = np.random.standard_normal((N, dimensions[0]))
+    labels = np.zeros((N, dimensions[2]))
+    for i in range(N):
+        labels[i, random.randint(0, dimensions[2] - 1)] = 1
+
+    params = np.random.randn((dimensions[0] + 1) * dimensions[1] + (
+            dimensions[1] + 1) * dimensions[2], )
+
+    gradcheck_naive(lambda params:
+                    forward_backward_prop(data, labels, params, dimensions), params)
     ### END YOUR CODE
 
 
