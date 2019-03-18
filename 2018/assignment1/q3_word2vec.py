@@ -56,13 +56,14 @@ def softmaxCostAndGradient(predicted, target, outputVectors, dataset):
     """
 
     ### YOUR CODE HERE
+    cost = np.float32(0)
     y = outputVectors.dot(predicted)  # (V, D) * (D, 1) = (V, 1)
-    y_hat = softmax(y) # (V, 1)
-    cost = -np.log(y_hat(target))
+    y_hat = softmax(y)  # (V, 1)
+    cost -= np.log(y_hat[target])
 
     y_hat[target] -= 1  # y_hat - y
     gradPred = outputVectors.T.dot(y_hat)  # (D, V) * (V,)  = (D,)
-    grad = y_hat.outer(predicted.T)  # (V, 1) * (1, D) = (V, D)
+    grad = np.outer(y_hat, predicted.T)  # (V, 1) * (1, D) = (V, D)
     ### END YOUR CODE
 
     return cost, gradPred, grad
@@ -100,21 +101,22 @@ def negSamplingCostAndGradient(predicted, target, outputVectors, dataset,
     indices.extend(getNegativeSamples(target, dataset, K))
 
     ### YOUR CODE HERE
+    cost = np.float32(0)
     neg_idx = indices[1:]
     y_t = outputVectors[target].dot(predicted) # (D,) * (D,) = 1
     y_n = -outputVectors[neg_idx].dot(predicted.T) # (K, D) * (D,) = (K,)
 
     y_sigt = sigmoid(y_t)
     y_sign = sigmoid(y_n).reshape(-1, 1)
-    cost = -np.log(y_sigt) - np.sum(np.log(y_sign))
+    cost -= (np.log(y_sigt) + np.sum(np.log(y_sign)))
 
-    d_ut = (1-y_sigt) * outputVectors[target]  # simplified from 1/y_sigt * sigmoid_grad(y_sigt) * outputVectors[target]
-    d_un = np.sum((y_sign - 1) * outputVectors[neg_idx], axis=0)  # simplified from -1/y_sign * np.sum(sigmoid_grad(-y_sign) * -outputVectors[neg_idx], axis=0)
+    d_ut = -(1-y_sigt) * outputVectors[target]  # simplified from 1/y_sigt * sigmoid_grad(y_sigt) * outputVectors[target]
+    d_un = -np.sum((y_sign - 1) * outputVectors[neg_idx], axis=0)  # simplified from -1/y_sign * np.sum(sigmoid_grad(-y_sign) * -outputVectors[neg_idx], axis=0)
     gradPred = d_ut + d_un
 
-    grad = np.zeros(outputVectors.shape)
-    grad[neg_idx] = ((1-y_sign) * predicted[neg_idx]).reshape(-1, 1) \
-                    * np.ones((len(neg_idx), outputVectors.shape[1]))  # (K,) * (K,) = (K,) * (K, D) = (K, D)
+    grad = np.zeros_like(outputVectors)
+    np.add.at(grad, neg_idx, ((1-y_sign) * predicted) \
+                    * np.ones((len(neg_idx), outputVectors.shape[1])))  # (K,) * (K,) = (K,) * (K, D) = (K, D)
     grad[target] = (y_sigt - 1) * predicted
     ### END YOUR CODE
 
@@ -145,12 +147,21 @@ def skipgram(currentWord, C, contextWords, tokens, inputVectors, outputVectors,
     grad -- the gradient with respect to the word vectors
     """
 
-    cost = 0.0
+    cost = np.float32(0.0)
     gradIn = np.zeros(inputVectors.shape)
     gradOut = np.zeros(outputVectors.shape)
 
     ### YOUR CODE HERE
-    raise NotImplementedError
+    center = tokens[currentWord]
+    predicted = inputVectors[center]
+
+    for word in contextWords:
+        tj = tokens[word]
+        cost_tj, gradPred, grad = word2vecCostAndGradient(predicted, tj, outputVectors, dataset)
+
+        cost += cost_tj
+        gradIn[center] += gradPred
+        gradOut += grad
     ### END YOUR CODE
 
     return cost, gradIn, gradOut
@@ -187,11 +198,11 @@ def cbow(currentWord, C, contextWords, tokens, inputVectors, outputVectors,
 def word2vec_sgd_wrapper(word2vecModel, tokens, wordVectors, dataset, C,
                          word2vecCostAndGradient=softmaxCostAndGradient):
     batchsize = 50
-    cost = 0.0
+    cost = np.float32(0)
     grad = np.zeros(wordVectors.shape)
     N = wordVectors.shape[0]
-    inputVectors = wordVectors[:N/2,:]
-    outputVectors = wordVectors[N/2:,:]
+    inputVectors = wordVectors[:N//2,:]
+    outputVectors = wordVectors[N//2:,:]
     for i in range(batchsize):
         C1 = random.randint(1,C)
         centerword, context = dataset.getRandomContext(C1)
@@ -205,8 +216,8 @@ def word2vec_sgd_wrapper(word2vecModel, tokens, wordVectors, dataset, C,
             centerword, C1, context, tokens, inputVectors, outputVectors,
             dataset, word2vecCostAndGradient)
         cost += c / batchsize / denom
-        grad[:N/2, :] += gin / batchsize / denom
-        grad[N/2:, :] += gout / batchsize / denom
+        grad[:N//2, :] += gin / batchsize / denom
+        grad[N//2:, :] += gout / batchsize / denom
 
     return cost, grad
 
