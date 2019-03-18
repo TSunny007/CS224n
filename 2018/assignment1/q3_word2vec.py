@@ -13,11 +13,9 @@ def normalizeRows(x):
     Implement a function that normalizes each row of a matrix to have
     unit length.
     """
-
     ### YOUR CODE HERE
-    raise NotImplementedError
+    x = x/np.sqrt(np.sum(np.square(x), axis=1, keepdims=True))
     ### END YOUR CODE
-
     return x
 
 
@@ -58,7 +56,13 @@ def softmaxCostAndGradient(predicted, target, outputVectors, dataset):
     """
 
     ### YOUR CODE HERE
-    raise NotImplementedError
+    y = outputVectors.dot(predicted)  # (V, D) * (D, 1) = (V, 1)
+    y_hat = softmax(y) # (V, 1)
+    cost = -np.log(y_hat(target))
+
+    y_hat[target] -= 1  # y_hat - y
+    gradPred = outputVectors.T.dot(y_hat)  # (D, V) * (V,)  = (D,)
+    grad = y_hat.outer(predicted.T)  # (V, 1) * (1, D) = (V, D)
     ### END YOUR CODE
 
     return cost, gradPred, grad
@@ -96,7 +100,22 @@ def negSamplingCostAndGradient(predicted, target, outputVectors, dataset,
     indices.extend(getNegativeSamples(target, dataset, K))
 
     ### YOUR CODE HERE
-    raise NotImplementedError
+    neg_idx = indices[1:]
+    y_t = outputVectors[target].dot(predicted) # (D,) * (D,) = 1
+    y_n = -outputVectors[neg_idx].dot(predicted.T) # (K, D) * (D,) = (K,)
+
+    y_sigt = sigmoid(y_t)
+    y_sign = sigmoid(y_n).reshape(-1, 1)
+    cost = -np.log(y_sigt) - np.sum(np.log(y_sign))
+
+    d_ut = (1-y_sigt) * outputVectors[target]  # simplified from 1/y_sigt * sigmoid_grad(y_sigt) * outputVectors[target]
+    d_un = np.sum((y_sign - 1) * outputVectors[neg_idx], axis=0)  # simplified from -1/y_sign * np.sum(sigmoid_grad(-y_sign) * -outputVectors[neg_idx], axis=0)
+    gradPred = d_ut + d_un
+
+    grad = np.zeros(outputVectors.shape)
+    grad[neg_idx] = ((1-y_sign) * predicted[neg_idx]).reshape(-1, 1) \
+                    * np.ones((len(neg_idx), outputVectors.shape[1]))  # (K,) * (K,) = (K,) * (K, D) = (K, D)
+    grad[target] = (y_sigt - 1) * predicted
     ### END YOUR CODE
 
     return cost, gradPred, grad
