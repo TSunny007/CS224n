@@ -56,10 +56,12 @@ def softmaxCostAndGradient(predicted, target, outputVectors, dataset):
     """
 
     ### YOUR CODE HERE
+
+    # refer to https://www.ics.uci.edu/~pjsadows/notes.pdf for the gradient information
     cost = np.float32(0)
-    y = outputVectors.dot(predicted)  # (V, D) * (D, 1) = (V, 1)
-    y_hat = softmax(y)  # (V, 1)
-    cost -= np.log(y_hat[target])
+    y = outputVectors.dot(predicted)  # (V, D) * (D, 1) = (V,)
+    y_hat = softmax(y)  # (V,)
+    cost -= 1 * np.log(y_hat[target])
 
     y_hat[target] -= 1  # y_hat - y
     gradPred = outputVectors.T.dot(y_hat)  # (D, V) * (V,)  = (D,)
@@ -98,23 +100,23 @@ def negSamplingCostAndGradient(predicted, target, outputVectors, dataset,
     # Sampling of indices is done for you. Do not modify this if you
     # wish to match the autograder and receive points!
     indices = [target]
-    indices.extend(getNegativeSamples(target, dataset, K))
+    indices += (getNegativeSamples(target, dataset, K))
 
     ### YOUR CODE HERE
-    cost = np.float32(0)
     neg_idx = indices[1:]
-    y_t = outputVectors[target].dot(predicted) # (D,) * (D,) = 1
-    y_n = -outputVectors[neg_idx].dot(predicted.T) # (K, D) * (D,) = (K,)
+    y_t = outputVectors[target].dot(predicted)  # (D,) * (D,) = 1
+    y_n = -outputVectors[neg_idx].dot(predicted.T)  # (K, D) * (D,) = (K,)
 
     y_sigt = sigmoid(y_t)
     y_sign = sigmoid(y_n).reshape(-1, 1)
-    cost -= (np.log(y_sigt) + np.sum(np.log(y_sign)))
+    cost = - np.log(y_sigt) - np.sum(np.log(y_sign))
 
     d_ut = -(1-y_sigt) * outputVectors[target]  # simplified from 1/y_sigt * sigmoid_grad(y_sigt) * outputVectors[target]
     d_un = -np.sum((y_sign - 1) * outputVectors[neg_idx], axis=0)  # simplified from -1/y_sign * np.sum(sigmoid_grad(-y_sign) * -outputVectors[neg_idx], axis=0)
     gradPred = d_ut + d_un
 
     grad = np.zeros_like(outputVectors)
+    # we do np.add.at because neg_idx can have duplicate row values.
     np.add.at(grad, neg_idx, ((1-y_sign) * predicted) \
                     * np.ones((len(neg_idx), outputVectors.shape[1])))  # (K,) * (K,) = (K,) * (K, D) = (K, D)
     grad[target] = (y_sigt - 1) * predicted

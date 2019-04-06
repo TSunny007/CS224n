@@ -17,7 +17,7 @@ def gradcheck_naive(f, x):
     rndstate = random.getstate()
     random.setstate(rndstate)
     fx, grad = f(x) # Evaluate function value at original point
-    h = 1e-4        # Do not change this!
+    h = 1e-4      # Do not change this!
 
     # Iterate over all indexes ix in x to check the gradient.
     it = np.nditer(x, flags=['multi_index'], op_flags=['readwrite'])
@@ -83,10 +83,10 @@ def your_sanity_checks():
     This function will not be called by the autograder, nor will
     your additional tests be graded.
     """
+    cubic = lambda x: (np.sum(x ** 3), 3 * x**2)
     print("Running your sanity checks...")
     ### YOUR CODE HERE
-    parabola = lambda x: (x**2, 2 * x)
-    gradcheck_naive(parabola, np.array([0, 1]))
+    gradcheck_naive(cubic, np.random.randn(3, ))  # 1-D test
     ### END YOUR CODE
 
 
