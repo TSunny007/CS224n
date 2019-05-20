@@ -58,14 +58,16 @@ def softmaxCostAndGradient(predicted, target, outputVectors, dataset):
     ### YOUR CODE HERE
 
     # refer to https://www.ics.uci.edu/~pjsadows/notes.pdf for the gradient information
-    cost = np.float32(0)
+    cost = 0.0
     y = outputVectors.dot(predicted)  # (V, D) * (D, 1) = (V,)
     y_hat = softmax(y)  # (V,)
     cost -= 1 * np.log(y_hat[target])
 
-    y_hat[target] -= 1  # y_hat - y
-    gradPred = outputVectors.T.dot(y_hat)  # (D, V) * (V,)  = (D,)
-    grad = np.outer(y_hat, predicted.T)  # (V, 1) * (1, D) = (V, D)
+    y_grad = np.copy(y_hat)
+    y_grad[target] -= 1  # y_grad = y_hat - y
+
+    gradPred = outputVectors.T.dot(y_grad)  # (D, V) * (V,) = (D,)
+    grad = np.outer(y_grad, predicted.T)  # (V, 1) * (1, D) = (V, D)
     ### END YOUR CODE
 
     return cost, gradPred, grad
@@ -149,17 +151,17 @@ def skipgram(currentWord, C, contextWords, tokens, inputVectors, outputVectors,
     grad -- the gradient with respect to the word vectors
     """
 
-    cost = np.float32(0.0)
+    cost = 0.0
     gradIn = np.zeros(inputVectors.shape)
     gradOut = np.zeros(outputVectors.shape)
 
     ### YOUR CODE HERE
     center = tokens[currentWord]
-    predicted = inputVectors[center]
+    v_hat = inputVectors[center]
 
     for word in contextWords:
         tj = tokens[word]
-        cost_tj, gradPred, grad = word2vecCostAndGradient(predicted, tj, outputVectors, dataset)
+        cost_tj, gradPred, grad = word2vecCostAndGradient(v_hat, tj, outputVectors, dataset)
 
         cost += cost_tj
         gradIn[center] += gradPred
@@ -187,7 +189,16 @@ def cbow(currentWord, C, contextWords, tokens, inputVectors, outputVectors,
     gradOut = np.zeros(outputVectors.shape)
 
     ### YOUR CODE HERE
-    raise NotImplementedError
+    target = tokens[currentWord]
+    predicted = np.zeros_like(inputVectors[target])
+
+    for word in contextWords:
+        predicted += inputVectors[tokens[word]]
+
+    cost, gradIn_pred, gradOut = word2vecCostAndGradient(predicted, target, outputVectors, dataset)
+    for i in [tokens[word] for word in contextWords]:
+        gradIn[i] += gradIn_pred
+
     ### END YOUR CODE
 
     return cost, gradIn, gradOut
