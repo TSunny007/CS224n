@@ -65,7 +65,7 @@ def getRegularizationValues():
     """
     values = None   # Assign a list of floats in the block below
     ### YOUR CODE HERE
-    raise NotImplementedError
+    values = np.logspace(-4, 2, num=10, base=10)
     ### END YOUR CODE
     return sorted(values)
 
@@ -91,7 +91,11 @@ def chooseBestModel(results):
     bestResult = None
 
     ### YOUR CODE HERE
-    raise NotImplementedError
+    best_dev_accuracy = 0
+    for result in results:
+        if result['dev'] > best_dev_accuracy:
+            best_dev_accuracy = result['dev']
+            bestResult = result
     ### END YOUR CODE
 
     return bestResult
@@ -143,7 +147,7 @@ def outputPredictions(dataset, features, labels, clf, filename):
         print("True\tPredicted\tText", file=f)
         for i in range(len(dataset)):
             print("%d\t%d\t%s" % (
-                labels[i], pred[i], " ".join(dataset[i][0])), file=f)
+                labels[i], pred[i], " ".join(map(lambda x: str(x), dataset[i][0]))), file=f)
 
 
 def main(args):
@@ -196,7 +200,7 @@ def main(args):
     for reg in regValues:
         print("Training for reg=%f" % reg)
         # Note: add a very small number to regularization to please the library
-        clf = LogisticRegression(C=1.0/(reg + 1e-12))
+        clf = LogisticRegression(C=1.0/(reg + 1e-12), solver='lbfgs', multi_class='auto', max_iter=200)
         clf.fit(trainFeatures, trainLabels)
 
         # Test on train set

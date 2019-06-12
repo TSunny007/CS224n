@@ -12,7 +12,7 @@ def loadWordVectors(tokens, filepath=DEFAULT_FILE_PATH, dimensions=50):
             if not line:
                 continue
             row = line.split()
-            token = row[0]
+            token = row[0].encode('utf8')
             if token not in tokens:
                 continue
             data = [float(x) for x in row[1:]]
