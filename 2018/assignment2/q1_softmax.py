@@ -22,8 +22,10 @@ def softmax(x):
         out: tf.Tensor with shape (n_sample, n_features). You need to construct this
                   tensor in this problem.
     """
-
+    out = None
     ### YOUR CODE HERE
+    shifted_x = tf.exp(x - tf.reduce_max(x, axis=1, keepdims=True))
+    out = shifted_x / tf.reduce_sum(shifted_x, axis=1, keepdims=True)
     ### END YOUR CODE
 
     return out
@@ -46,14 +48,15 @@ def cross_entropy_loss(y, yhat):
 
     Args:
         y:    tf.Tensor with shape (n_samples, n_classes). One-hot encoded.
-        yhat: tf.Tensorwith shape (n_sample, n_classes). Each row encodes a
+        yhat: tf.Tensor with shape (n_sample, n_classes). Each row encodes a
                     probability distribution and should sum to 1.
     Returns:
         out:  tf.Tensor with shape (1,) (Scalar output). You need to construct this
                     tensor in the problem.
     """
-
+    out = None
     ### YOUR CODE HERE
+    out = -tf.reduce_sum(tf.cast(y, dtype=tf.float32) * tf.log(yhat))
     ### END YOUR CODE
 
     return out

@@ -46,6 +46,12 @@ class SoftmaxModel(Model):
             self.labels_placeholder
         """
         ### YOUR CODE HERE
+        batch_size = self.config.batch_size
+        n_features = self.config.n_features
+        n_classes = self.config.n_classes
+
+        self.input_placeholder = tf.placeholder(tf.float32, shape=(batch_size, n_features))
+        self.labels_placeholder = tf.placeholder(tf.int32, shape=(batch_size, n_classes))
         ### END YOUR CODE
 
     def create_feed_dict(self, inputs_batch, labels_batch=None):
@@ -68,7 +74,9 @@ class SoftmaxModel(Model):
         Returns:
             feed_dict: The feed dictionary mapping from placeholders to values.
         """
+        feed_dict = None
         ### YOUR CODE HERE
+        feed_dict = {self.input_placeholder: inputs_batch, self.labels_placeholder: labels_batch}
         ### END YOUR CODE
         return feed_dict
 
@@ -89,7 +97,13 @@ class SoftmaxModel(Model):
         Returns:
             pred: A tensor of shape (batch_size, n_classes)
         """
+        pred = None
         ### YOUR CODE HERE
+        with tf.variable_scope('affine'):
+            bias = tf.Variable(tf.random_uniform((self.config.n_classes,)))
+            W = tf.Variable(tf.random_uniform((self.config.n_features, self.config.n_classes)))
+            transformed = tf.matmul(self.input_placeholder, W) + bias
+        pred = softmax(transformed)
         ### END YOUR CODE
         return pred
 
@@ -103,7 +117,9 @@ class SoftmaxModel(Model):
         Returns:
             loss: A 0-d tensor (scalar)
         """
+        loss = None
         ### YOUR CODE HERE
+        loss = cross_entropy_loss(self.labels_placeholder, pred)
         ### END YOUR CODE
         return loss
 
@@ -126,7 +142,9 @@ class SoftmaxModel(Model):
         Returns:
             train_op: The Op for training.
         """
+        train_op = None
         ### YOUR CODE HERE
+        train_op = tf.train.GradientDescentOptimizer(self.config.lr).minimize(loss)
         ### END YOUR CODE
         return train_op
 
