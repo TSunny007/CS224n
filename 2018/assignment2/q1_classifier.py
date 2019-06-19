@@ -99,10 +99,9 @@ class SoftmaxModel(Model):
         """
         pred = None
         ### YOUR CODE HERE
-        with tf.variable_scope('affine'):
-            bias = tf.Variable(tf.random_uniform((self.config.n_classes,)))
-            W = tf.Variable(tf.random_uniform((self.config.n_features, self.config.n_classes)))
-            transformed = tf.matmul(self.input_placeholder, W) + bias
+        bias = tf.Variable(tf.random_uniform((self.config.n_classes,)))
+        W = tf.Variable(tf.random_uniform((self.config.n_features, self.config.n_classes)))
+        transformed = tf.matmul(self.input_placeholder, W) + bias
         pred = softmax(transformed)
         ### END YOUR CODE
         return pred
