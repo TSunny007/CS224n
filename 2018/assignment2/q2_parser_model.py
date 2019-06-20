@@ -24,6 +24,7 @@ class Config(object):
     batch_size = 1024
     n_epochs = 10
     lr = 0.0005
+    lambda_ = 1e-8
 
 
 class ParserModel(Model):
@@ -54,6 +55,9 @@ class ParserModel(Model):
         (Don't change the variable names)
         """
         ### YOUR CODE HERE
+        self.input_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.n_features))
+        self.labels_placeholder = tf.placeholder(tf.float32, shape=(None, self.config.n_classes))
+        self.dropout_placeholder = tf.placeholder(tf.float32)
         ### END YOUR CODE
 
     def create_feed_dict(self, inputs_batch, labels_batch=None, dropout=0):
@@ -78,7 +82,11 @@ class ParserModel(Model):
         Returns:
             feed_dict: The feed dictionary mapping from placeholders to values.
         """
+        feed_dict = None
         ### YOUR CODE HERE
+        feed_dict = {self.input_placeholder: inputs_batch, self.dropout_placeholder: dropout}
+        if labels_batch is not None:
+            feed_dict[self.labels_placeholder] = labels_batch
         ### END YOUR CODE
         return feed_dict
 
@@ -100,20 +108,23 @@ class ParserModel(Model):
             embeddings: tf.Tensor of shape (None, n_features*embed_size)
         """
         ### YOUR CODE HERE
+        embeddings = tf.Variable(self.pretrained_embeddings)
+        embeddings = tf.nn.embedding_lookup(embeddings, self.input_placeholder)
+        embeddings = tf.reshape(embeddings, (-1, self.config.n_features * self.config.embed_size))
         ### END YOUR CODE
         return embeddings
 
     def add_prediction_op(self):
         """Adds the 1-hidden-layer NN:
-            h = Relu(xW + b1)
+            h = Relu(xW1 + b1)
             h_drop = Dropout(h, dropout_rate)
-            pred = h_dropU + b2
+            pred = h_dropW2 + b2
 
         Note that we are not applying a softmax to pred. The softmax will instead be done in
         the add_loss_op function, which improves efficiency because we can use
         tf.nn.softmax_cross_entropy_with_logits
 
-        Use the initializer from q2_initialization.py to initialize W and U (you can initialize b1
+        Use the initializer from q2_initialization.py to initialize W and W2 (you can initialize b1
         and b2 with zeros)
 
         Hint: Note that tf.nn.dropout takes the keep probability (1 - p_drop) as an argument.
@@ -126,6 +137,16 @@ class ParserModel(Model):
 
         x = self.add_embedding()
         ### YOUR CODE HERE
+        xavier_initializer = xavier_weight_init()
+
+        self.w1 = w1 = xavier_initializer((self.config.n_features * self.config.embed_size, self.config.hidden_size))
+        self.w2 = w2 = xavier_initializer((self.config.hidden_size, self.config.n_classes))
+        b1 = xavier_initializer((self.config.hidden_size,))
+        b2 = xavier_initializer((self.config.n_classes,))
+
+        h = tf.nn.relu(tf.matmul(x, w1) + b1)
+        h_drop = tf.layers.dropout(h, rate = 1 - self.dropout_placeholder)
+        pred = tf.matmul(h_drop, w2) + b2
         ### END YOUR CODE
         return pred
 
@@ -143,6 +164,9 @@ class ParserModel(Model):
             loss: A 0-d tensor (scalar)
         """
         ### YOUR CODE HERE
+        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(self.labels_placeholder, pred)) + \
+            self.config.lambda_ * tf.nn.l2_loss(self.w1) + \
+            self.config.lambda_ * tf.nn.l2_loss(self.w2)
         ### END YOUR CODE
         return loss
 
@@ -167,6 +191,7 @@ class ParserModel(Model):
             train_op: The Op for training.
         """
         ### YOUR CODE HERE
+        train_op = tf.train.AdamOptimizer(self.config.lr).minimize(loss)
         ### END YOUR CODE
         return train_op
 
@@ -181,9 +206,9 @@ class ParserModel(Model):
         prog = tf.keras.utils.Progbar(target=n_minibatches)
         for i, (train_x, train_y) in enumerate(minibatches(train_examples, self.config.batch_size)):
             loss = self.train_on_batch(sess, train_x, train_y)
-            prog.update(i + 1, [("train loss", loss)], force=i + 1 == n_minibatches)
+            prog.update(i + 1, [("train loss", loss)])
 
-        print("Evaluating on dev set", end=' ')
+        print(" Evaluating on dev set", end=' ')
         dev_UAS, _ = parser.parse(dev_set)
         print("- dev UAS: {:.2f}".format(dev_UAS * 100.0))
         return dev_UAS
