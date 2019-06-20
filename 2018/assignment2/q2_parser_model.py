@@ -269,7 +269,7 @@ def main(debug=True):
             UAS, dependencies = parser.parse(test_set)
             print("- test UAS: {:.2f}".format(UAS * 100.0))
             print("Writing predictions")
-            with open('q2_test.predicted.pkl', 'w') as f:
+            with open('q2_test.predicted.pkl', 'wb') as f:
                 pickle.dump(dependencies, f, -1)
             print("Done!")
 
