@@ -25,6 +25,7 @@ class Config(object):
     n_epochs = 10
     lr = 0.0005
     lambda_ = 1e-8
+    cube = False
 
 
 class ParserModel(Model):
@@ -144,7 +145,13 @@ class ParserModel(Model):
         b1 = xavier_initializer((self.config.hidden_size,))
         b2 = xavier_initializer((self.config.n_classes,))
 
-        h = tf.nn.relu(tf.matmul(x, w1) + b1)
+        h = tf.matmul(x, w1) + b1
+        # I get to (optionally) use the notorious cube activation here! 
+        # 
+        if self.config.cube:
+            h = tf.pow(h, 3 * tf.ones_like(h))
+        else:
+            h = tf.nn.relu(h)
         h_drop = tf.layers.dropout(h, rate = 1 - self.dropout_placeholder)
         pred = tf.matmul(h_drop, w2) + b2
         ### END YOUR CODE
