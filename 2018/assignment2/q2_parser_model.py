@@ -147,7 +147,7 @@ class ParserModel(Model):
 
         h = tf.matmul(x, w1) + b1
         # I get to (optionally) use the notorious cube activation here! 
-        # 
+        # taken from https://cs.stanford.edu/people/danqi/papers/emnlp2014.pdf
         if self.config.cube:
             h = tf.pow(h, 3 * tf.ones_like(h))
         else:
