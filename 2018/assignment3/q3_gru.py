@@ -4,8 +4,8 @@
 Q3: Grooving with GRUs
 """
 
-from __future__ import absolute_import
-from __future__ import division
+
+
 
 import argparse
 import logging

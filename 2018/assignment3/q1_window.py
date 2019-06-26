@@ -27,17 +27,15 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
 class Config:
     """Holds model hyperparams and data information.
-
     The config class is used to store various hyperparameters and dataset
     information parameters. Model objects are passed a Config() object at
     instantiation.
-
     TODO: Fill in what n_window_features should be, using n_word_features and window_size.
     """
     n_word_features = 2 # Number of features for every word in the input.
     window_size = 1 # The size of the window to use.
     ### YOUR CODE HERE
-    n_window_features = 0 # The total number of features used for each window.
+    n_window_features = (2 * window_size + 1) * n_word_features # The total number of features used for each window.
     ### END YOUR CODE
     n_classes = 5
     dropout = 0.5
@@ -66,7 +64,7 @@ def make_windowed_data(data, start, end, window_size = 1):
     input sentence by concatenating the words @window_size to the left
     and @window_size to the right to the word. Finally, add this new
     window data point and its label. to windowed_data.
-
+    
     Args:
         data: is a list of (sentence, labels) tuples. @sentence is a list
             containing the words in the sentence and @label is a list of
@@ -97,8 +95,11 @@ def make_windowed_data(data, start, end, window_size = 1):
     windowed_data = []
     for sentence, labels in data:
 		### YOUR CODE HERE (5-20 lines)
-
-		### END YOUR CODE
+        padded_sentence = window_size * [start] + sentence + [end] * window_size
+        for idx in range(len(sentence)):
+            example = [coord for vec in padded_sentence[idx:idx+2*window_size+1] for coord in vec] # flatten out the list
+            windowed_data.append((example, labels[idx]))
+        ### END YOUR CODE
     return windowed_data
 
 class WindowModel(NERModel):
@@ -130,7 +131,9 @@ class WindowModel(NERModel):
         (Don't change the variable names)
         """
         ### YOUR CODE HERE (~3-5 lines)
-
+        self.input_placeholder = tf.placeholder(tf.int32, (None, self.config.n_window_features))
+        self.labels_placeholder = tf.placeholder(tf.int32, (None,))
+        self.dropout_placeholder = tf.placeholder(tf.float32)
         ### END YOUR CODE
 
     def create_feed_dict(self, inputs_batch, labels_batch=None, dropout=1):
@@ -153,7 +156,10 @@ class WindowModel(NERModel):
             feed_dict: The feed dictionary mapping from placeholders to values.
         """
         ### YOUR CODE HERE (~5-10 lines)
-         
+        feed_dict = {self.input_placeholder: inputs_batch,
+                     self.dropout_placeholder: dropout}
+        if labels_batch is not None:
+            feed_dict[self.labels_placeholder] = labels_batch
         ### END YOUR CODE
         return feed_dict
 
@@ -174,9 +180,9 @@ class WindowModel(NERModel):
             embeddings: tf.Tensor of shape (None, n_window_features*embed_size)
         """
         ### YOUR CODE HERE (!3-5 lines)
-                                                             
-                                  
-                                                                                                                 
+        embed_matrix = tf.Variable(self.pretrained_embeddings)
+        embeddings = tf.reshape(tf.nn.embedding_lookup(embed_matrix, self.input_placeholder), 
+                                (-1, self.config.n_window_features * self.config.embed_size)) 
         ### END YOUR CODE
         return embeddings
 
@@ -199,15 +205,24 @@ class WindowModel(NERModel):
 
         Note: tf.nn.dropout takes the keep probability (1 - p_drop) as an argument.
             The keep probability should be set to the value of dropout_rate.
-
+            
         Returns:
             pred: tf.Tensor of shape (batch_size, n_classes)
         """
 
         x = self.add_embedding()
-        dropout_rate = self.dropout_placeholder
+        dropout_rate = 1-self.dropout_placeholder
         ### YOUR CODE HERE (~10-20 lines)
+        initializer = tf.contrib.layers.xavier_initializer()
+        W = tf.Variable(initializer((self.config.n_window_features * self.config.embed_size, self.config.hidden_size)), name='W')
+        b1 = tf.Variable(initializer((self.config.hidden_size,)), name='b1')
 
+        U = tf.Variable(initializer((self.config.hidden_size, self.config.n_classes)), name='U')
+        b2 = tf.Variable(initializer((self.config.n_classes,)), name='b2')
+
+        h = tf.nn.relu(tf.matmul(x, W) + b1)
+        h_drop = tf.nn.dropout(h, rate=dropout_rate)
+        pred = tf.matmul(h_drop, U) + b2
         ### END YOUR CODE
         return pred
 
@@ -215,7 +230,6 @@ class WindowModel(NERModel):
         """Adds Ops for the loss function to the computational graph.
         In this case we are using cross entropy loss.
         The loss should be averaged over all examples in the current minibatch.
-
         Remember that you can use tf.nn.sparse_softmax_cross_entropy_with_logits to simplify your
         implementation. You might find tf.reduce_mean useful.
         Args:
@@ -225,7 +239,8 @@ class WindowModel(NERModel):
             loss: A 0-d tensor (scalar)
         """
         ### YOUR CODE HERE (~2-5 lines)
-                                   
+        loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.labels_placeholder,
+                                                                             logits=pred))                           
         ### END YOUR CODE
         return loss
 
@@ -249,7 +264,7 @@ class WindowModel(NERModel):
             train_op: The Op for training.
         """
         ### YOUR CODE HERE (~1-2 lines)
-
+        train_op = tf.train.AdamOptimizer(self.config.lr).minimize(loss)
         ### END YOUR CODE
         return train_op
 
@@ -270,7 +285,6 @@ class WindowModel(NERModel):
 
     def predict_on_batch(self, sess, inputs_batch):
         """Make predictions for the provided batch of data
-
         Args:
             sess: tf.Session()
             input_batch: np.ndarray of shape (n_samples, n_features)

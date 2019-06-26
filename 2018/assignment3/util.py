@@ -6,12 +6,12 @@ util.py: General utility routines
 Arun Chaganty <chaganty@stanford.edu>
 """
 
-from __future__ import division
+
 
 import sys
 import time
 import logging
-import StringIO
+import io
 from collections import defaultdict, Counter, OrderedDict
 import numpy as np
 from numpy import array, zeros, allclose
@@ -98,7 +98,7 @@ Peter	PER
 Blackburn	PER
 
 """
-    output_ = StringIO.StringIO()
+    output_ = io.StringIO()
     write_conll(output_, input)
     output_ = output_.getvalue()
     assert output == output_
@@ -182,9 +182,9 @@ def to_table(data, row_labels, column_labels, precision=2, digits=4):
     # Convert data to strings
     data = [["%04.2f"%v for v in row] for row in data]
     cell_width = max(
-        max(map(len, row_labels)),
-        max(map(len, column_labels)),
-        max(max(map(len, row)) for row in data))
+        max(list(map(len, row_labels))),
+        max(list(map(len, column_labels))),
+        max(max(list(map(len, row))) for row in data))
     def c(s):
         """adjust cell output"""
         return s + " " * (cell_width - len(s))
@@ -218,7 +218,7 @@ class ConfusionMatrix(object):
 
     def summary(self, quiet=False):
         """Summarize counts"""
-        keys = range(len(self.labels))
+        keys = list(range(len(self.labels)))
         data = []
         macro = array([0., 0., 0., 0.])
         micro = array([0., 0., 0., 0.])
