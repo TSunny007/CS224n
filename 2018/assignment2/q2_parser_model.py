@@ -24,8 +24,10 @@ class Config(object):
     batch_size = 1024
     n_epochs = 10
     lr = 0.0005
-    lambda_ = 1e-8
-    cube = False
+    # these are extra features I added, assign them the commented values to disable them.
+    # Both of these improve performance significantly, especially the cube activation function
+    lambda_ = 1e-8 # 0
+    cube = True # False
 
 
 class ParserModel(Model):
