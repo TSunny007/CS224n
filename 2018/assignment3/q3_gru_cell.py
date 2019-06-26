@@ -4,8 +4,8 @@
 Q3(d): Grooving with GRUs
 """
 
-from __future__ import absolute_import
-from __future__ import division
+
+
 
 import argparse
 import logging
@@ -109,8 +109,8 @@ def test_gru_cell():
                 ht = y
 
                 y_, ht_ = session.run([y_var, ht_var], feed_dict={x_placeholder: x, h_placeholder: h})
-                print("y_ = " + str(y_))
-                print("ht_ = " + str(ht_))
+                print(("y_ = " + str(y_)))
+                print(("ht_ = " + str(ht_)))
 
                 assert np.allclose(y_, ht_), "output and state should be equal."
                 assert np.allclose(ht, ht_, atol=1e-2), "new state vector does not seem to be correct."

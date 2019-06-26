@@ -90,7 +90,7 @@ class ModelHelper(object):
         tok2id = build_dict((normalize(word) for sentence, _ in data for word in sentence), offset=1, max_words=10000)
         tok2id.update(build_dict([P_CASE + c for c in CASES], offset=len(tok2id)))
         tok2id.update(build_dict([START_TOKEN, END_TOKEN, UNK], offset=len(tok2id)))
-        assert sorted(tok2id.items(), key=lambda t: t[1])[0][1] == 1
+        assert sorted(list(tok2id.items()), key=lambda t: t[1])[0][1] == 1
         logger.info("Built dictionary for %d features.", len(tok2id))
 
         max_length = max(len(sentence) for sentence, _ in data)
@@ -102,7 +102,7 @@ class ModelHelper(object):
         if not os.path.exists(path):
             os.makedirs(path)
         # Save the tok2id map.
-        with open(os.path.join(path, "features.pkl"), "w") as f:
+        with open(os.path.join(path, "features.pkl"), "wb") as f:
             pickle.dump([self.tok2id, self.max_length], f)
 
     @classmethod
@@ -110,7 +110,7 @@ class ModelHelper(object):
         # Make sure the directory exists.
         assert os.path.exists(path) and os.path.exists(os.path.join(path, "features.pkl"))
         # Save the tok2id map.
-        with open(os.path.join(path, "features.pkl")) as f:
+        with open(os.path.join(path, "features.pkl"), 'rb') as f:
             tok2id, max_length = pickle.load(f)
         return cls(tok2id, max_length)
 
@@ -133,7 +133,7 @@ def load_and_preprocess_data(args):
 def load_embeddings(args, helper):
     embeddings = np.array(np.random.randn(len(helper.tok2id) + 1, EMBED_SIZE), dtype=np.float32)
     embeddings[0] = 0.
-    for word, vec in load_word_vector_mapping(args.vocab, args.vectors).items():
+    for word, vec in list(load_word_vector_mapping(args.vocab, args.vectors).items()):
         word = normalize(word)
         if word in helper.tok2id:
             embeddings[helper.tok2id[word]] = vec
